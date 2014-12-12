@@ -935,8 +935,6 @@ int main(int argc, char *argv[])
 					{		
 						if(compararStrings(contidas[0].palavra, entrada) == true)
 						{
-							printf("Palavra chave encontrada!\n\n");
-						
 							//PASSANDO PALAVRA SORTEADA PARA OUTRA ESTRUTURA NA POSIÇÃO COM O MESMO NÚMERO DE CHARS
 							passaString(palavrasAcertadas, numDeFormadas, entrada);
 
@@ -966,7 +964,6 @@ int main(int argc, char *argv[])
 					
 						else
 						{
-							printf("Palavra '%s' encontrada!\n\n", contidas[resultado].palavra);
 							cont++;
 						
 							//PASSANDO PALAVRAS ACERTADAS PARA OUTRA ESTRUTURA
@@ -996,22 +993,19 @@ int main(int argc, char *argv[])
 					
 					else
 					{
-						printf("Palavra '%s' não encontrada.\n\n", entrada);
 						nChances -= 1;
 						errou = 1;		
 					}
 				}
 
 				else
-				{
-					printf("A palavra %s já foi encontrada.\n\n", entrada);			
+				{			
 					repetiu = 1;
 				}
 			}
 			
 			else
 			{
-				printf("Ops, por favor, utilize apenas letras, sem acento ou cedilha.\n");
 				invalido = 1;
 			}
 
