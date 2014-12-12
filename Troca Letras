@@ -1,0 +1,1633 @@
+#include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <time.h>
+#include "SDL/SDL.h"
+#include "SDL/SDL_image.h"
+#include "SDL/SDL_ttf.h"
+#define maiorPalavra 15
+#define totalDeLetras 23
+#define totalDeContidas 30
+#define totalDePalavras 1610
+#define tempoJogo 10
+
+const int telaLargura = 800;
+const int telaAltura = 600;
+const int telaBPP = 32;
+
+struct alfabeto
+{
+	int letra;
+};
+
+struct dados
+{
+	char palavra[15];
+};
+
+void resetaBanco(struct dados banco[]);
+void resetaDisponiveis(struct alfabeto letras[]);
+void resetaSaida(char vetor[]);
+void reseta(char vetor[]);
+void backspace(char letra, struct alfabeto entrada[]);
+void refresh(SDL_Surface* ponteiro);
+void printaTela(int x, int y, SDL_Surface* origem, SDL_Surface* destino);
+void inverte(char vetor[]);
+void itoa(int num, char vetor[]);
+void passaString(struct dados estrutura[], int numPalavras, char entrada[]);
+void embaralha(char vetor[], char vetorVago[]);
+void contaEntrada(char vetor[], struct alfabeto entrada[]);
+void contaBanco(struct dados entrada[], struct alfabeto letrasBanco[], int posicao);
+
+bool compararStrings(char palavra1[], char palavra2[]);
+
+int temLetra(struct alfabeto disponiveis[], int n);
+int contaPontos(int pontos, char entrada[]);
+int testarLetras(char vetor[]);
+int sorteia(char vetor[]);
+int procurarStrings(struct dados estrutura[], char entradaDoUsuario[], int numDePalavras);
+
+
+
+int main(int argc, char *argv[])
+{
+	//GERAL
+	char entrada[15] = "";
+	char saida[15] = {'-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'};
+	char pontosTela[] = "";
+	
+	int numAleatorio = 0;
+	int resultado = 0;
+	int cont = 0;
+	int cont2 = 1;
+	int cont3 = 0;
+	int teste = 0;
+	int total = 0;
+	int palavraContida = 0;
+	int palavraRepetida = 0;
+	int numDeFormadas = 0;
+	int errou = 0;
+	int achou = 0;
+	int repetiu = 0;
+	int invalido = 0;
+	int pontos = 0;
+	int loop = 0;
+	int apagou = 0;
+	int chave = 0;
+	int rodada = 0;
+	int gameover = 0;
+
+	//TELAS
+	SDL_Surface* tela = NULL;
+	SDL_Surface* menu = NULL;
+	SDL_Surface* jogo = NULL;
+
+	//TEXTO
+	SDL_Surface* info = NULL;
+	SDL_Surface* tracejado = NULL;
+	SDL_Surface* input = NULL;
+	SDL_Surface* pontosTxt = NULL;
+	SDL_Surface* nota = NULL;
+	//SDL_Surface* tempo = NULL;
+	int tracejadoX = 60;
+	int tracejadoY = 48;
+
+	//FONTE
+	TTF_Font *fonte = NULL;
+
+	//EVENTO
+	SDL_Event evento;
+	int i;
+	char letraApagada;
+
+	//TEMPO
+	/*int tempoTotal = (tempoJogo + (SDL_GetTicks() / 1000000) - 876);
+	int running = 1;
+	int tempoAux = 0;
+	int tempoVerificador;
+	char tempoVetor[3];*/
+	
+	srand(time(NULL));
+
+	struct alfabeto letrasSorteada[totalDeLetras], letrasBanco[totalDeLetras] = {{0}};
+
+	struct dados contidas[totalDeContidas], palavrasAcertadas[totalDeContidas] = {{"\0"}};
+	
+	struct dados banco[totalDePalavras] =
+	{
+		{"aba"}, {"abacate"}, {"abacaxi"}, {"abadia"}, {"abafador"}, {"abajur"}, {"abalo"}, {"abate"}, {"abdome"}, {"abelha"},
+		{"abertura"}, {"abismo"}, {"abobrinha"}, {"abono"}, {"aborto"}, {"adega"}, {"abridor"}, {"abrigo"}, {"abril"}, {"abrolho"},
+		{"abrupto"}, {"abscesso"}, {"absinto"}, {"abstrato"}, {"absurdo"}, {"abuso"}, {"abutre"}, {"acabamento"}, {"academia"}, {"acalanto"},
+		{"acampamento"}, {"acaso"}, {"acelerador"}, {"acelga"}, {"aceno"}, {"acento"}, {"acepipe"}, {"acerola"}, {"acerto"}, {"acervo"},
+		{"acesso"}, {"acetato"}, {"achocolatado"}, {"acidente"}, {"acompanhamento"}, {"aconchego"}, {"acontecimento"}, {"acorde"}, {"acordo"}, {"acostamento"},
+		{"acre"}, {"acrobata"}, {"adendo"}, {"adaga"}, {"adepto"}, {"adesivo"}, {"adeus"}, {"adivinho"}, {"adjetivo"}, {"corredor"},
+		{"adolescente"}, {"aduana"}, {"adubo"}, {"adulto"}, {"adutora"}, {"advento"}, {"advogado"}, {"rolha"}, {"aerobarco"}, {"aeroclube"},
+		{"aeromodelo"}, {"aeronave"}, {"aeroplano"}, {"aeroporto"}, {"aerosol"}, {"afago"}, {"afazeres"}, {"afeto"}, {"afilhado"}, {"afinco"},
+		{"afinidade"}, {"afluxo"}, {"afresco"}, {"afronta"}, {"afta"}, {"agasalho"}, {"agenda"}, {"agiota"}, {"agito"}, {"agonia"},
+		{"agosto"}, {"agouro"}, {"agrado"}, {"agravante"}, {"agricultor"}, {"agronomia"}, {"agrupamento"}, {"aguaceiro"}, {"aguardente"}, {"agulha"},
+		{"aia"}, {"aids"}, {"aipim"}, {"aipo"}, {"ajudante"}, {"ajuste"}, {"alabastro"}, {"alambique"}, {"alambrado"}, {"alameda"},
+		{"alarde"}, {"alarme"}, {"alavanca"}, {"albergue"}, {"albino"}, {"alcachofra"}, {"alcance"}, {"alcoolismo"}, {"alcova"}, {"alcunha"},
+		{"aldeia"}, {"alecrim"}, {"alegoria"}, {"alegria"}, {"alento"}, {"alergia"}, {"alerta"}, {"alfa"}, {"alfabeto"}, {"alface"},
+		{"alfafa"}, {"alfaiate"}, {"alfanje"}, {"alfazema"}, {"alferes"}, {"alfinete"}, {"alforje"}, {"alforria"}, {"alga"}, {"algema"},
+		{"algoz"}, {"alho"}, {"aliado"}, {"alicate"}, {"alicerce"}, {"alimento"}, {"alistamento"}, {"aljava"}, {"alma"}, {"almirante"},
+		{"almofada"}, {"alojamento"}, {"alpaca"}, {"alpinismo"}, {"alquimista"}, {"altar"}, {"altura"}, {"alude"}, {"aluguel"}, {"aluno"},
+		{"alvejante"}, {"alvorada"}, {"plano"}, {"amaciante"}, {"amador"}, {"amante"}, {"amarelo"}, {"amazona"}, {"ambiente"}, {"ambulante"},
+		{"ameba"}, {"ameia"}, {"ameixa"}, {"amendoim"}, {"americano"}, {"ametista"}, {"amido"}, {"amigo"}, {"amor"}, {"amora"},
+		{"amparo"}, {"ampola"}, {"anaconda"}, {"analista"}, {"anarquia"}, {"anatomia"}, {"anca"}, {"andarilho"}, {"anedota"}, {"anel"},
+		{"anemia"}, {"aneurisma"}, {"anexo"}, {"angra"}, {"animal"}, {"anistia"}, {"ano"}, {"anjo"}, {"anorexia"}, {"anormal"},
+		{"rodovia"}, {"antena"}, {"mundo"}, {"antiguidade"}, {"anzol"}, {"aparato"}, {"aparelho"}, {"apartamento"}, {"apelido"}, {"aperitivo"},
+		{"apicultor"}, {"apito"}, {"aplauso"}, {"apoio"}, {"apontador"}, {"aposentadoria"}, {"aposento"}, {"apuro"}, {"aquarela"}, {"aqueduto"},
+		{"arame"}, {"aranha"}, {"arca"}, {"arcanjo"}, {"arcano"}, {"archote"}, {"arco"}, {"areia"}, {"arena"}, {"argila"},
+		{"arma"}, {"armada"}, {"armadura"}, {"armeiro"}, {"aroma"}, {"arqueiro"}, {"arquivo"}, {"arraia"}, {"arreio"}, {"arrepio"},
+		{"arroba"}, {"arroto"}, {"arruda"}, {"arsenal"}, {"arte"}, {"artefato"}, {"artesanato"}, {"artigo"}, {"artilharia"}, {"artista"},
+		{"asa"}, {"asfalto"}, {"asilo"}, {"asma"}, {"aspargo"}, {"aspirador"}, {"assalto"}, {"assepsia"}, {"assoalho"}, {"assobio"},
+		{"astro"}, {"astronauta"}, {"ateu"}, {"atlas"}, {"atleta"}, {"ato"}, {"atol"}, {"ator"}, {"atraso"}, {"atrito"},
+		{"atroz"}, {"atum"}, {"aura"}, {"azul"}, {"automobilismo"}, {"autorama"}, {"aval"}, {"ave"}, {"avental"}, {"azar"},
+		{"baba"}, {"babador"}, {"babado"}, {"babosa"}, {"bacalhau"}, {"bacharel"}, {"bacia"}, {"bafo"}, {"bagagem"}, {"bagre"},
+		{"bagulho"}, {"noite"}, {"baile"}, {"baioneta"}, {"baixada"}, {"bala"}, {"balada"}, {"balde"}, {"baleia"}, {"balela"},
+		{"baliza"}, {"baluarte"}, {"bambu"}, {"banal"}, {"banana"}, {"banco"}, {"banda"}, {"bandeira"}, {"bandeirante"}, {"bandeja"},
+		{"bandido"}, {"bando"}, {"bandoleira"}, {"banha"}, {"banheiro"}, {"banho"}, {"banjo"}, {"banqueiro"}, {"banquete"}, {"bar"},
+		{"baralho"}, {"barata"}, {"barato"}, {"barba"}, {"barbeiro"}, {"barca"}, {"bardo"}, {"barganha"}, {"barqueiro"}, {"barraca"},
+		{"barraco"}, {"barragem"}, {"barranco"}, {"barreira"}, {"barricada"}, {"barrica"}, {"barril"}, {"barro"}, {"barroco"}, {"barulho"},
+		{"basalto"}, {"base"}, {"cigarro"}, {"basquete"}, {"bastardo"}, {"batalha"}, {"batata"}, {"batedor"}, {"bateria"}, {"baunilha"},
+		{"bebedouro"}, {"bebida"}, {"beca"}, {"beijo"}, {"bem"}, {"bens"}, {"berimbau"}, {"berinjela"}, {"berlinda"}, {"berne"},
+		{"berrante"}, {"besta"}, {"beterraba"}, {"bexiga"}, {"bica"}, {"bicho"}, {"bicicleta"}, {"bico"}, {"biga"}, {"bigode"},
+		{"bigorna"}, {"bimotor"}, {"bingo"}, {"biologia"}, {"bioesfera"}, {"bipolar"}, {"biruta"}, {"bispo"}, {"bizarro"}, {"blefe"},
+		{"caatinga"}, {"cabana"}, {"cabeceira"}, {"cabedal"}, {"cabeleira"}, {"cabeleireiro"}, {"cabelo"}, {"cabide"}, {"cabo"}, {"caboclo"},
+		{"cabra"}, {"cabresto"}, {"cabrito"}, {"cacau"}, {"cachecol"}, {"cacho"}, {"cachoeira"}, {"cachorro"}, {"cacique"}, {"caco"},
+		{"cacto"}, {"cadastro"}, {"cadeado"}, {"cadeia"}, {"cadeira"}, {"cadela"}, {"caderno"}, {"cafeteira"}, {"cafezal"}, {"caibro"},
+		{"caimento"}, {"caixa"}, {"caixote"}, {"cajado"}, {"caju"}, {"cajueiro"}, {"cal"}, {"calafrio"}, {"calamidade"}, {"calcinha"},
+		{"calculadora"}, {"calda"}, {"caldeira"}, {"caldo"}, {"calha"}, {"calibre"}, {"caligrafia"}, {"calo"}, {"calombo"}, {"calor"},
+		{"caloria"}, {"calota"}, {"calote"}, {"calouro"}, {"cama"}, {"camareira"}, {"camarim"}, {"camarote"}, {"cambalhota"}, {"camelo"},
+		{"caminhada"}, {"caminho"}, {"caminhoneiro"}, {"caminhonete"}, {"camisa"}, {"camiseta"}, {"camisinha"}, {"camisola"}, {"campainha"}, {"campanha"},
+		{"campeonato"}, {"campina"}, {"campo"}, {"camuflagem"}, {"camundongo"}, {"cana"}, {"canal"}, {"canavial"}, {"cancela"}, {"candeeiro"},
+		{"candeia"}, {"cadela"}, {"candelabro"}, {"candidato"}, {"candidatura"}, {"caneca"}, {"canela"}, {"caneleira"}, {"caneta"}, {"canga"},
+		{"cangote"}, {"canibal"}, {"canil"}, {"canja"}, {"canjica"}, {"cano"}, {"canoa"}, {"cascata"}, {"cantiga"}, {"cantina"},
+		{"canto"}, {"canudo"}, {"capa"}, {"capacete"}, {"capacho"}, {"capacidade"}, {"capataz"}, {"capela"}, {"capim"}, {"capinzal"},
+		{"dado"}, {"dama"}, {"damasco"}, {"danceteria"}, {"dano"}, {"dardo"}, {"data"}, {"deboche"}, {"decatlo"}, {"decimal"},
+		{"declive"}, {"decote"}, {"decreto"}, {"dedo"}, {"defeito"}, {"degrau"}, {"delegado"}, {"delito"}, {"delta"}, {"demanda"},
+		{"denso"}, {"dengue"}, {"dente"}, {"depoimento"}, {"desafeto"}, {"desastre"}, {"desconto"}, {"desejo"}, {"desempenho"}, {"desenho"},
+		{"desfiladeiro"}, {"desfile"}, {"designer"}, {"despacho"}, {"despedida"}, {"destaque"}, {"detector"}, {"detergente"}, {"diabo"}, {"diploma"},
+		{"disco"}, {"ditado"}, {"ditador"}, {"diva"}, {"doca"}, {"doce"}, {"dote"}, {"dose"}, {"dueto"}, {"duna"},
+		{"duque"}, {"dreno"}, {"duende"}, {"domingo"}, {"doente"}, {"dom"}, {"despensa"}, {"disciplina"}, {"diretor"}, {"direito"},
+		{"diplomata"}, {"diplomacia"}, {"dinamite"}, {"dignidade"}, {"dificuldade"}, {"diagrama"}, {"diadema"}, {"detetive"}, {"desodorante"}, {"desertor"},
+		{"eclipse"}, {"eco"}, {"ecologia"}, {"economia"}, {"ecosistema"}, {"edital"}, {"editora"}, {"edredom"}, {"eixo"}, {"elefante"},
+		{"eleitor"}, {"elemento"}, {"elenco"}, {"eletricidade"}, {"elite"}, {"elmo"}, {"elo"}, {"ema"}, {"embalagem"}, {"embargo"},
+		{"embarque"}, {"embate"}, {"emblema"}, {"emboscada"}, {"embreagem"}, {"embrulho"}, {"emenda"}, {"ementa"}, {"emissora"}, {"empada"},
+		{"empate"}, {"empecilho"}, {"empenho"}, {"emplastro"}, {"empreendimento"}, {"empregado"}, {"emprego"}, {"empreitada"}, {"empreiteira"}, {"encaixe"},
+		{"encanador"}, {"encanto"}, {"encargo"}, {"encarte"}, {"enchente"}, {"encomenda"}, {"encontro"}, {"encosta"}, {"encruzilhada"}, {"energia"},
+		{"enfeite"}, {"enfermagem"}, {"enfermaria"}, {"enfermeiro"}, {"mito"}, {"engavetamento"}, {"engenharia"}, {"engenheiro"}, {"engenho"}, {"engrenagem"},
+		{"enigma"}, {"enredo"}, {"ensaio"}, {"enseada"}, {"ensino"}, {"entalho"}, {"enteado"}, {"enterro"}, {"entrada"}, {"entrega"},
+		{"faca"}, {"face"}, {"fachada"}, {"fada"}, {"fadiga"}, {"falha"}, {"falange"}, {"fama"}, {"falsidade"}, {"famoso"},
+		{"fantasia"}, {"farda"}, {"farelo"}, {"farinha"}, {"farpa"}, {"farra"}, {"farsa"}, {"fase"}, {"fatal"}, {"favor"},
+		{"faxina"}, {"faxineiro"}, {"fazenda"}, {"febre"}, {"federal"}, {"feio"}, {"feira"}, {"fenda"}, {"feno"}, {"ferida"},
+		{"ferreiro"}, {"ferro"}, {"festa"}, {"festival"}, {"feto"}, {"fidalgo"}, {"figa"}, {"figo"}, {"fila"}, {"figura"},
+		{"fogueira"}, {"fogo"}, {"filtro"}, {"fita"}, {"flamingo"}, {"flor"}, {"flauta"}, {"foca"}, {"folha"}, {"fonte"},
+		{"gabarito"}, {"gabinete"}, {"gado"}, {"gafanhoto"}, {"gafe"}, {"gaiato"}, {"gaiola"}, {"gaita"}, {"galeto"}, {"galho"},
+		{"galinha"}, {"galinheiro"}, {"galo"}, {"galocha"}, {"gangorra"}, {"gangue"}, {"ganido"}, {"ganso"}, {"garfo"}, {"garganta"},
+		{"garimpeiro"}, {"garimpo"}, {"garoa"}, {"garra"}, {"garrafa"}, {"gata"}, {"gatlho"}, {"gaveta"}, {"geada"}, {"gel"},
+		{"geladeira"}, {"gelatina"}, {"geleira"}, {"gelo"}, {"gema"}, {"gene"}, {"gengiva"}, {"genro"}, {"gentileza"}, {"geografia"},
+		{"gerador"}, {"germe"}, {"gesso"}, {"gestante"}, {"gesto"}, {"gibi"}, {"gigante"}, {"girafa"}, {"giz"}, {"globo"},
+		{"harpa"}, {"hidra"}, {"hiena"}, {"hino"}, {"hipismo"}, {"hipnose"}, {"hipoteca"}, {"homossexual"}, {"honra"}, {"horda"},
+		{"horta"}, {"homem"}, {"hospital"}, {"humano"}, {"humor"}, {"humilde"}, {"hotel"}, {"hostil"}, {"hora"}, {"higiene"},
+		{"ibope"}, {"idade"}, {"ideal"}, {"idiota"}, {"igreja"}, {"ilha"}, {"iguana"}, {"impacto"}, {"imperador"}, {"imperatriz"},
+		{"imposto"}, {"imprensa"}, {"impressora"}, {"impulso"}, {"imunidade"}, {"impureza"}, {"incenso"}, {"incesto"}, {"inferno"}, {"infinito"},
+		{"informante"}, {"infrator"}, {"ingresso"}, {"inhame"}, {"inquilino"}, {"inseto"}, {"inspetor"}, {"intervalo"}, {"intestino"}, {"inveja"},
+		{"jaca"}, {"jade"}, {"jaguar"}, {"jaleco"}, {"janela"}, {"jangada"}, {"janta"}, {"jaqueta"}, {"jardim"}, {"jarro"},
+		{"jaula"}, {"jejum"}, {"jipe"}, {"joalheiro"}, {"joelho"}, {"jogo"}, {"jornada"}, {"jornal"}, {"juba"}, {"juiz"},
+		{"junta"}, {"jurado"}, {"juramento"}, {"juros"}, {"computador"}, {"justa"}, {"bioma"}, {"jumento"}, {"jabuti"}, {"joaninha"},
+		{"labareda"}, {"labirinto"}, {"lacaio"}, {"lacraia"}, {"lactose"}, {"lacuna"}, {"ladeira"}, {"lado"}, {"ladrilho"}, {"lagarta"},
+		{"lago"}, {"lagoa"}, {"laico"}, {"laje"}, {"lama"}, {"lambreta"}, {"lamparina"}, {"lancha"}, {"lanche"}, {"lanterna"},
+		{"lapiseira"}, {"lar"}, {"laranja"}, {"lareira"}, {"larva"}, {"lasanha"}, {"lastro"}, {"lata"}, {"latrina"}, {"laudo"},
+		{"lava"}, {"lebre"}, {"legado"}, {"legenda"}, {"legume"}, {"lei"}, {"leite"}, {"leito"}, {"lema"}, {"lembrete"},
+		{"lenha"}, {"lente"}, {"leque"}, {"liberdade"}, {"liga"}, {"limpeza"}, {"linguagem"}, {"linha"}, {"locutor"}, {"luz"},
+		{"macaco"}, {"maionese"}, {"macete"}, {"machado"}, {"maconha"}, {"madeira"}, {"madrasta"}, {"madre"}, {"madrugada"}, {"magma"},
+		{"magnata"}, {"mago"}, {"sorteio"}, {"major"}, {"mal"}, {"majestade"}, {"metade"}, {"malabarismo"}, {"mala"}, {"malha"},
+		{"mamute"}, {"mameluco"}, {"maluco"}, {"mamilo"}, {"manancial"}, {"mancha"}, {"marcha"}, {"manequim"}, {"manga"}, {"mania"},
+		{"manifesto"}, {"manto"}, {"manual"}, {"mar"}, {"marechal"}, {"margem"}, {"marisco"}, {"marmanjo"}, {"marmelada"}, {"marmota"},
+		{"marte"}, {"martelo"}, {"marujo"}, {"mascote"}, {"massa"}, {"mastro"}, {"mato"}, {"medalha"}, {"medo"}, {"mercado"},
+		{"nadadeira"}, {"namoro"}, {"nariz"}, {"natal"}, {"natural"}, {"navalha"}, {"nazismo"}, {"netuno"}, {"ninfa"}, {"ninfeta"},
+		{"nirvana"}, {"nobre"}, {"ninho"}, {"nobel"}, {"noivo"}, {"novato"}, {"nudez"}, {"nutriente"}, {"nuvem"}, {"navio"},
+		{"novela"}, {"novena"}, {"nota"}, {"norte"}, {"nome"}, {"nicho"}, {"neve"}, {"neto"}, {"nervo"}, {"neblina"},
+		{"obelisco"}, {"objeto"}, {"obra"}, {"oca"}, {"ocaso"}, {"oceano"}, {"odor"}, {"odre"}, {"oferta"}, {"oficina"},
+		{"ogiva"}, {"olaria"}, {"olho"}, {"oligarquia"}, {"oliva"}, {"ombro"}, {"onda"}, {"opereta"}, {"oportunidade"}, {"orador"},
+		{"orbe"}, {"ordem"}, {"ordenha"}, {"orelha"}, {"orfanato"}, {"orgia"}, {"orla"}, {"orquestra"}, {"orvalho"}, {"osso"},
+		{"ostra"}, {"otite"}, {"ouro"}, {"ouvido"}, {"ouvidor"}, {"equipe"}, {"ovelha"}, {"tumba"}, {"organismo"}, {"programa"},
+		{"paca"}, {"paciente"}, {"padaria"}, {"pradaria"}, {"pacote"}, {"padeiro"}, {"padre"}, {"padrinho"}, {"padroeiro"}, {"pagamento"},
+		{"pagode"}, {"pai"}, {"pais"}, {"painel"}, {"paisagem"}, {"pajem"}, {"paladar"}, {"paladino"}, {"palanque"}, {"palavra"},
+		{"palco"}, {"palestra"}, {"palha"}, {"palheta"}, {"palito"}, {"palma"}, {"palmeira"}, {"palmito"}, {"pampa"}, {"palpite"},
+		{"pancadaria"}, {"panela"}, {"pano"}, {"panqueca"}, {"pantanal"}, {"pantomima"}, {"papel"}, {"papo"}, {"par"}, {"parafina"},
+		{"parede"}, {"parto"}, {"passo"}, {"pasta"}, {"pastel"}, {"pasto"}, {"pastor"}, {"pata"}, {"pato"}, {"patrulha"},
+		{"quadra"}, {"quadril"}, {"quadrilha"}, {"quadrinho"}, {"quadro"}, {"quantia"}, {"queixo"}, {"quermesse"}, {"quesito"}, {"quiabo"},
+		{"quilate"}, {"quilo"}, {"quilombo"}, {"quina"}, {"quindim"}, {"quintal"}, {"quinteto"}, {"quinzena"}, {"quitanda"}, {"quitute"},
+		{"queijo"}, {"qualidade"}, {"quantidade"}, {"quaresma"}, {"quartel"}, {"quasar"}, {"queimada"}, {"quimera"}, {"querela"}, {"quisto"},
+		{"rato"}, {"rabada"}, {"rabino"}, {"rabo"}, {"rachadura"}, {"racismo"}, {"radar"}, {"radiador"}, {"radiografia"}, {"rainha"},
+		{"raiva"}, {"raiz"}, {"raio"}, {"rajada"}, {"ralo"}, {"ramal"}, {"ramo"}, {"rampa"}, {"rancho"}, {"rapaz"},
+		{"rapina"}, {"raposa"}, {"velho"}, {"rascunho"}, {"rastro"}, {"ratazana"}, {"ratoeira"}, {"ravina"}, {"realidade"}, {"realeza"},
+		{"reator"}, {"rebanho"}, {"rebelde"}, {"reboque"}, {"recado"}, {"receita"}, {"recheio"}, {"recibo"}, {"recompensa"}, {"recorde"},
+		{"recruta"}, {"recurso"}, {"redemoinho"}, {"rede"}, {"reduto"}, {"reforma"}, {"regata"}, {"regador"}, {"regime"}, {"reino"},
+		{"sabatina"}, {"sabedoria"}, {"sabonete"}, {"sabor"}, {"sabugo"}, {"saca"}, {"sacarose"}, {"sacerdote"}, {"saco"}, {"sacola"},
+		{"safira"}, {"safra"}, {"saga"}, {"saia"}, {"sal"}, {"salada"}, {"salame"}, {"saldo"}, {"saleiro"}, {"salina"},
+		{"saliva"}, {"salsa"}, {"salsicha"}, {"salto"}, {"samba"}, {"sangue"}, {"sapo"}, {"sebo"}, {"seda"}, {"sede"},
+		{"seita"}, {"seiva"}, {"sela"}, {"selo"}, {"selva"}, {"semana"}, {"semblante"}, {"senha"}, {"senhorio"}, {"senso"},
+		{"sentimento"}, {"senzala"}, {"sereno"}, {"sidra"}, {"signo"}, {"silicone"}, {"sinal"}, {"sobrado"}, {"sobrinho"}, {"substantivo"},
+		{"tabaco"}, {"tabela"}, {"taberna"}, {"tablado"}, {"tabuada"}, {"tabuleiro"}, {"tacha"}, {"tacho"}, {"taco"}, {"talco"},
+		{"talento"}, {"telhado"}, {"talharim"}, {"talher"}, {"talo"}, {"tambor"}, {"tamoio"}, {"tango"}, {"tarde"}, {"tarefa"},
+		{"tartaruga"}, {"tatame"}, {"tato"}, {"tatu"}, {"tatuagem"}, {"touro"}, {"tecla"}, {"tecido"}, {"teatro"}, {"teia"},
+		{"telefone"}, {"telepatia"}, {"televisor"}, {"telha"}, {"telhado"}, {"temor"}, {"tumor"}, {"temperatura"}, {"temporada"}, {"temporal"},
+		{"tenda"}, {"tenente"}, {"teorema"}, {"teologia"}, {"teoria"}, {"terminal"}, {"terra"}, {"terror"}, {"terrorismo"}, {"tesoura"},
+		{"uberdade"}, {"ufania"}, {"uivo"}, {"ultraje"}, {"ultramar"}, {"umbanda"}, {"umbigo"}, {"umidade"}, {"unha"}, {"unidade"},
+		{"uniforme"}, {"universidade"}, {"universo"}, {"mochila"}, {"urano"}, {"urbanismo"}, {"urbe"}, {"uretra"}, {"urina"}, {"urna"},
+		{"urro"}, {"urso"}, {"urtiga"}, {"urubu"}, {"utopia"}, {"uva"}, {"utilidade"}, {"usufruto"}, {"usura"}, {"ultimato"},
+		{"usina"}, {"urbano"}, {"ultraleve"}, {"umidade"}, {"urucubaca"}, {"instrumento"}, {"urinol"}, {"urdidura"}, {"untura"}, {"unto"},
+		{"vaca"}, {"vacina"}, {"vaga"}, {"vagabundo"}, {"vagem"}, {"vaidade"}, {"vala"}, {"vale"}, {"valor"}, {"valsa"},
+		{"vampiro"}, {"vantagem"}, {"vapor"}, {"vaqueiro"}, {"vara"}, {"varal"}, {"varanda"}, {"varejo"}, {"vareta"}, {"vargem"},
+		{"variedade"}, {"vassoura"}, {"vaselina"}, {"vasilha"}, {"vasilhame"}, {"vaso"}, {"vassalo"}, {"veado"}, {"vegetal"}, {"vegetariano"},
+		{"vela"}, {"velocidade"}, {"veludo"}, {"vencimento"}, {"venda"}, {"vento"}, {"ventania"}, {"verba"}, {"verdura"}, {"vereador"},
+		{"vergonha"}, {"verme"}, {"vermelho"}, {"verniz"}, {"verso"}, {"vertigem"}, {"vespa"}, {"vetor"}, {"viaduto"}, {"vida"},
+		{"xadrez"}, {"xale"}, {"xarope"}, {"xerife"}, {"xerox"}, {"xilofone"}, {"xisto"}, {"xampu"}, {"xaxim"}, {"xamanismo"},
+		{"zabumba"}, {"zaga"}, {"zagueiro"}, {"zanga"}, {"zarabatana"}, {"zarolho"}, {"zebra"}, {"zefir"}, {"zelador"}, {"zelo"},
+		{"zelote"}, {"zepelim"}, {"zeta"}, {"zibelina"}, {"zigoto"}, {"ziguezague"}, {"zimbro"},{"zinabre"}, {"zinco"}, {"zoeira"},
+		{"zombaria"}, {"zona"}, {"zonzeira"}, {"zoologia"}, {"zorra"}, {"zumbi"}, {"zumbido"}, {"zurapazurro"}, {"ziper"}, {"zoneamento"},
+		{"bota"}, {"teto"}, {"veia"}, {"broca"}, {"rabanada"}, {"cera"}, {"futilidade"}, {"nabo"}, {"cenoura"}, {"quiabo"},
+		{"carne"}, {"ovo"}, {"burro"}, {"cavalo"}, {"escola"}, {"futebol"}, {"barco"}, {"veleiro"}, {"caramujo"}, {"formiga"},
+		{"rei"}, {"fruto"}, {"fruta"}, {"melancia"}, {"plataforma"}, {"ringue"}, {"briga"}, {"luta"}, {"floresta"}, {"carro"},
+		{"trem"}, {"passageiro"}, {"tarifa"}, {"motor"}, {"motorista"}, {"dentista"}, {"arquiteto"}, {"porta"}, {"planta"}, {"caule"},
+		{"estudante"}, {"soldado"}, {"chefe"}, {"mestre"}, {"feiticeiro"}, {"praia"}, {"sereia"}, {"cervo"}, {"alce"}, {"golfinho"},
+		{"cardume"}, {"alcateia"}, {"enxame"}, {"trono"}, {"estrada"}, {"guerreiro"}, {"monge"}, {"cruzada"}, {"peste"}, {"bobo"},
+		{"cobertor"}, {"beliche"}, {"som"}, {"buraco"}, {"relacionamento"}, {"geometria"}, {"algoritmo"}, {"carta"}, {"carteiro"}, {"mensagem"},
+		{"microfone"}, {"celular"}, {"preservativo"}, {"querosene"}, {"gasolina"}, {"propriedade"}, {"cantor"}, {"deus"}, {"lubrificante"}, {"pneu"},
+		{"roda"}, {"freio"}, {"volante"}, {"vidro"}, {"metal"}, {"aterro"}, {"projeto"}, {"trabalho"}, {"prova"}, {"teste"},
+		{"moeda"}, {"dinheiro"}, {"droga"}, {"sexo"}, {"cobra"}, {"boi"}, {"piloto"}, {"planeta"}, {"estrela"}, {"arbusto"},
+		{"escritura"}, {"documento"}, {"contrato"}, {"loja"}, {"faculdade"}, {"rua"}, {"avenida"}, {"estacionamento"}, {"besouro"}, {"grilo"},
+		{"arroz"}, {"pele"}, {"limpeza"}, {"trigo"}, {"chinelo"}, {"concreto"}, {"cheque"}, {"soja"}, {"parente"}, {"sol"},
+		{"lua"}, {"casamento"}, {"cimento"}, {"tijolo"}, {"sapato"}, {"gravata"}, {"terno"}, {"poeira"}, {"pulga"}, {"gato"},
+		{"ventilador"}, {"tanque"}, {"servo"}, {"lorde"}, {"cavaleiro"}, {"cavalheiro"}, {"cela"}, {"ferradura"}, {"passagem"}, {"tomate"},
+		{"encanamento"}, {"verde"}, {"roxo"}, {"cinza"}, {"branco"}, {"preto"}, {"pizza"}, {"copo"}, {"corpo"}, {"tempo"},
+		{"chuva"}, {"chuveiro"}, {"fritura"}, {"colesterol"}, {"circo"}, {"perfume"}, {"rosa"}, {"torre"}, {"muro"}, {"muralha"},
+		{"trave"}, {"gol"}, {"sociedade"}, {"presidente"}, {"senador"}, {"deputado"}, {"governador"}, {"prefeito"}, {"vereador"}, {"estado"},
+		{"viela"}, {"controle"}, {"ferramenta"}, {"mesa"}, {"chave"}, {"mel"}, {"torradeira"}, {"bolsa"}, {"tomada"}, {"espelho"},
+		{"reflexo"}, {"mangueira"}, {"fio"}, {"interruptor"}, {"prateleira"}, {"canivete"}, {"pedra"}, {"rocha"}, {"reta"}, {"curva"},
+		{"rodo"}, {"colmeia"}, {"processador"}, {"placa"}, {"baqueta"}, {"mapa"}, {"mina"}, {"corrente"}, {"corda"}, {"vendedor"},
+		{"hectare"}, {"metro"}, {"litro"}, {"peso"}, {"serra"}, {"guitarra"}, {"ogro"}, {"prata"},{"bronze"}, {"travesseiro"},
+		{"seio"}, {"ventre"}, {"foto"}, {"retrato"}, {"imagem"}, {"brinquedo"}, {"rio"}, {"primo"}, {"escada"}, {"colher"},
+		{"casa"}, {"prato"}, {"tornado"}, {"ar"}, {"monte"}, {"morro"}, {"montanha"}, {"chapada"}, {"leste"}, {"oeste"},
+		{"frio"}, {"quarentena"}, {"ditadura"}, {"prancheta"}, {"prancha"}, {"monstro"}, {"povo"}, {"disquete"}, {"azia"}, {"panfleto"},
+		{"anestesia"}, {"lupa"}, {"livro"}, {"livraria"}, {"biblioteca"}, {"museu"}, {"jantar"}, {"lodo"}, {"galeria"}, {"lira"},
+		{"bote"}, {"dia"}, {"sopa"}, {"grade"}, {"guardanapo"}, {"seta"}, {"carreta"}, {"pedido"}, {"peixe"}, {"lula"},
+		{"torso"}, {"moto"}, {"tomo"}, {"soro"}, {"esmeralda"}, {"tio"}, {"aro"}, {"coroa"}, {"caseiro"}, {"caranguejo"},
+		//forte pote ripa runa rum nata tocha anta piso reserva
+		//pia piada clima roupa perna fone macho minhoca tequila vila
+		//vaia raia gorro governo nora erro nado ode ala erva
+		//licor aula bairro birra sala rapadura tala pau pino ponte
+		//filho filha virose sino pinto atmosfera guia pilar linho morsa
+		//
+	};
+
+	//INICIALIZANDO SDL
+	SDL_Init(SDL_INIT_EVERYTHING);
+
+	tela = SDL_SetVideoMode(800, 600, 32, SDL_SWSURFACE | SDL_DOUBLEBUF);
+
+	SDL_Color txtCor = { 0, 0, 0};
+	SDL_Color azul = {0, 0, 200};
+	SDL_Color vermelho = {180, 0, 0};
+	SDL_Color amarelo = {255, 155, 50};
+	SDL_Color verde = {0, 200, 20};
+
+	//-------------------------MENU-------------------------
+	SDL_WM_SetCaption("Troca Letras", NULL);
+
+	menu = IMG_Load("Imagens/menu.jpg");
+
+	while(loop == 0)
+	{
+		while(SDL_PollEvent(&evento))
+		{	
+			if(evento.type == SDL_QUIT)
+			{
+				SDL_FreeSurface(menu);
+				SDL_Quit();
+				return 0;
+			}
+
+			if(evento.type == SDL_KEYUP)
+			{
+				switch(evento.key.keysym.sym)
+				{
+					case SDLK_ESCAPE:
+						SDL_FreeSurface(menu);
+						SDL_Quit();
+						return 0;
+
+					case SDLK_RETURN:
+						loop = 1;
+						break;
+
+					default:
+						continue;
+				}
+			}
+		}	
+		SDL_BlitSurface(menu, NULL, tela, NULL);
+		SDL_UpdateRect(tela, 0, 0, 0, 0);
+		SDL_Delay(60);
+	}
+
+	SDL_FreeSurface(menu);
+	menu = NULL;
+	//-------------------------FIM-------------------------
+
+	do //LOOP DE GAMEOVER
+	{
+	struct dados contidas[totalDeContidas], palavrasAcertadas[totalDeContidas] = {{"\0"}};
+	//RESETANDO ESTRUTURAS PARA RODADA
+	resetaDisponiveis(letrasSorteada);
+	resetaDisponiveis(letrasBanco);
+
+	resetaBanco(contidas);
+	resetaBanco(palavrasAcertadas);
+
+	//RESETANDO VARIÁVEIS PARA NOVA RODADA
+	total = 0;
+	cont3 = 0;
+	numDeFormadas = 0;
+	palavraRepetida = 0;
+	resultado = 0;
+
+	numAleatorio = rand () % totalDePalavras;
+
+	while(sorteia(banco[numAleatorio].palavra) < 7)
+	{
+		while(cont < maiorPalavra)
+		{
+			banco[numAleatorio].palavra[cont] = '-';
+			cont++;
+		}
+		numAleatorio = rand () % totalDePalavras;
+	}
+
+	printf("TESTE: %s", banco[numAleatorio].palavra);///////////////////////////////////////
+
+	//ESCREVENDO A PALAVRA SORTEADA NA PRIMEIRA POSIÇÃO DAS CONTIDAS
+	for(cont = 0; banco[numAleatorio].palavra[cont] != '\0'; cont++)
+		contidas[0].palavra[cont] = banco[numAleatorio].palavra[cont];
+	
+	//EMBARALHANDO AS LETRAS DA PALAVRA SORTEADA
+	embaralha(banco[numAleatorio].palavra, saida);
+	
+	//CONTANDO QUANTAS LETRAS DE CADA TEM A PALAVRA SORTEADA
+	contaEntrada(saida, letrasSorteada);
+
+	//SELECIONANDO QUAIS PALAVRAS DO BANCO PODEM SER FORMADAS COM AS LETRAS DISPONÍVEIS
+	do{
+
+		resetaDisponiveis(letrasBanco);
+			
+		contaBanco(banco, letrasBanco, total);
+		
+		//CICLO QUE BUSCA POR PALAVRAS CONTIDAS NA SORTEADA
+		for(cont = 0; cont < totalDeLetras; cont++)
+		{
+			if(letrasBanco[cont].letra > 0)
+			{
+				if(letrasBanco[cont].letra <= letrasSorteada[cont].letra)
+					continue;
+						
+				else
+				{
+					palavraContida = 1;
+					break;
+				}
+			}
+		}
+		
+		//SELEÇÃO DAS PALAVRAS
+		//TESTA SE A PALAVRA JÁ ESTÁ ENTRE AS CONTIDAS
+		if(compararStrings(contidas[0].palavra, banco[total].palavra) == false)
+
+			if(palavraContida != 1 && cont2 < totalDeContidas)
+			{
+				for(cont = 0; banco[total].palavra[cont] != '\0'; cont++)
+				{
+					contidas[cont2].palavra[cont] = banco[total].palavra[cont];
+				}
+				cont2++;
+			}
+		
+		palavraContida = 0;
+		
+	total++;
+	
+	teste = cont2;
+	
+	}while(total < totalDePalavras);
+	
+	numDeFormadas = cont2;
+
+	printf("FORMADAS: %d\n", numDeFormadas);///////////////////////////////////////
+	
+	//ESCONDENDO AS PALAVRAS QUE PODERÃO SER FORMADAS
+	for(cont = 0; cont < numDeFormadas; cont++)
+	{
+		for(cont3 = 0; contidas[cont].palavra[cont3] != '\0'; cont3++)
+		{ 
+			palavrasAcertadas[cont].palavra[cont3] = '-';
+		}
+	}
+
+	int x = 0;
+	for(x = 0; x < numDeFormadas; x++)
+		printf("%s \n", palavrasAcertadas[x].palavra);
+	
+	cont = 0;
+	i = 0;
+	
+	do{
+
+		//-------------------------CONTROLE-------------------------
+		//tempo = SDL_GetTicks();
+		loop = 0;
+
+		while(loop == 0)
+		{
+				/*printf("Pontuação: %d\n", pontos);
+				printf("Palavra sorteada: %s\n", saida);*/
+
+				itoa(pontos, pontosTela);
+
+			//-------------------------RODADA-------------------------
+			apagou = 0;
+
+			while(apagou == 0)
+			{
+				jogo = IMG_Load("Imagens/jogo.jpg");
+				SDL_BlitSurface(jogo, NULL, tela, NULL);			
+
+				//INFORMAÇÕES SOBRE A RODADA
+				TTF_Init();
+
+				fonte = TTF_OpenFont("Fontes/GREGH.ttf", 33);
+
+				//CABEÇALHO
+				info = TTF_RenderText_Blended(fonte, "Pontos:                                                               Tempo:", txtCor);
+				printaTela(65, -3, info, tela);
+
+				info = TTF_RenderText_Blended(fonte, "Palavra Sorteada:", txtCor);
+				printaTela(65, 45, info, tela);
+
+				info = TTF_RenderText_Blended(fonte, saida, azul);
+				printaTela(265, 45, info, tela);		
+
+				//PONTUAÇÃO
+				pontosTxt = TTF_RenderText_Blended(fonte, pontosTela, azul);
+				printaTela(150, 0, pontosTxt, tela);
+		
+				//IMPRIMINDO AS PALAVRAS QUE PODEM SER FORMADAS (TELA)
+				fonte = TTF_OpenFont("Fontes/GREGH.ttf", 38);
+
+				//COORDENADAS PARA IMPRIMIR O TRACEJADO
+				tracejadoX = 60;
+				tracejadoY = 160;
+				tracejado = NULL;
+
+				for(cont2 = 0; cont2 < numDeFormadas; cont2++)
+				{
+					//printf("%s\n", palavrasAcertadas[cont2].palavra);
+					if(cont2 == 0)
+					{
+						tracejadoX = 60;
+						tracejadoY = 160;
+					}
+
+					else if(cont2 <= 5)
+					{
+						tracejadoY += 46;
+					}
+
+					else if(cont2 == 6)
+					{
+						tracejadoX += 160;
+						tracejadoY = 160;
+					}
+
+					else if(cont2 > 6 && cont2 <= 11)
+						tracejadoY += 46;
+
+					else if(cont2 == 12)
+					{
+						tracejadoX += 160;
+						tracejadoY = 160;
+					}
+
+					else if(cont2 > 12 && cont2 <= 17)
+						tracejadoY += 46;
+
+					else if(cont2 == 18)
+					{
+						tracejadoX += 160;
+						tracejadoY = 160;	
+					}
+
+					else if(cont2 > 18 && cont2 <= 23)
+						tracejadoY += 46;
+
+					else if(cont2 == 24)
+					{
+						tracejadoX += 160;
+						tracejadoY = 160;	
+					}
+
+					else if(cont2 > 24 && cont2 <= 29)
+						tracejadoY += 46;
+
+					if(cont2 >= 0)
+					{
+						tracejado = TTF_RenderText_Blended(fonte, palavrasAcertadas[cont2].palavra, txtCor);
+						printaTela(tracejadoX, tracejadoY, tracejado, tela);
+					}
+				}
+
+				fonte = TTF_OpenFont("Fontes/GREGH.ttf", 33);
+
+				if(chave == 1)
+				{
+					nota = TTF_RenderText_Blended(fonte, "Palavra chave encontrada!!!", verde);
+					printaTela(65, 93, nota, tela);			
+					chave = 0;
+				}
+
+				if(achou == 1)
+				{
+					nota = TTF_RenderText_Blended(fonte, "Palavra encontrada!!!", verde);
+					printaTela(65, 93, nota, tela);			
+					achou = 0;
+				}
+
+				if(repetiu == 1)
+				{
+					nota = TTF_RenderText_Blended(fonte, "Palavra repetida.", amarelo);
+					printaTela(65, 93, nota, tela);
+					repetiu = 0;
+				}
+
+				if(errou == 1)
+				{
+					nota = TTF_RenderText_Blended(fonte, "Palavra inexistente.", vermelho);
+					printaTela(65, 93, nota, tela);
+					errou = 0;
+				}
+
+				if(invalido == 1)
+				{
+					nota = TTF_RenderText_Blended(fonte, "Ops, por favor, utilize apenas letras, sem acento ou cedilha.", vermelho);
+					printaTela(65, 93, nota, tela);
+					invalido = 0;
+				}
+
+				//REFRESH PRINCIPAL
+				fonte = TTF_OpenFont("Fontes/GREGH.ttf", 50);
+
+				input = TTF_RenderText_Blended(fonte, entrada, vermelho);
+				printaTela(290, 500, input, tela);
+				SDL_UpdateRect(tela, 0, 0, 0, 0);
+				SDL_FreeSurface(jogo);
+				SDL_FreeSurface(info);
+				SDL_FreeSurface(pontosTxt);
+				SDL_FreeSurface(tracejado);
+				SDL_FreeSurface(nota);
+				SDL_FreeSurface(input);
+
+				//RESETANDO OS PONTEIROS
+				jogo = NULL;
+				info = NULL;
+				pontosTxt = NULL;
+				tracejado = NULL;
+				nota = NULL;
+
+				while(SDL_WaitEvent(&evento))
+				{
+
+	/*fonte = TTF_OpenFont("Fontes/GREGH.ttf", 33);
+
+	if (running == 1)
+	{
+		tempoVerificador = (tempoTotal - (SDL_GetTicks() / 1000));
+		itoa((tempoTotal - (SDL_GetTicks() / 1000)), tempoVetor);
+		tempo = TTF_RenderText_Blended(fonte, tempoVetor, azul);
+		printaTela(630, 5, tempo, tela);
+		SDL_UpdateRect(tela, 0, 0, 0, 0);
+		SDL_FreeSurface(tempo);
+	}
+
+	else
+	{
+		tempoVerificador = tempoAux;
+		itoa(tempoAux, tempoVetor);
+		tempo = TTF_RenderText_Blended(fonte, tempoVetor, azul);
+		printaTela(630, 5, tempo, tela);
+		SDL_UpdateRect(tela, 0, 0, 0, 0);
+		SDL_FreeSurface(tela);
+	}
+
+	//Se acabou o tempo...
+	if(tempoVerificador <= 0)
+	{
+		return 0;
+	}*/
+
+					if(evento.type == SDL_QUIT)
+						return 0;
+						
+					if(evento.type == SDL_KEYDOWN)
+					{
+						switch(evento.key.keysym.sym)
+						{
+							case SDLK_a:
+								if(temLetra(letrasSorteada, 0) == 1 && i != 15)
+								{
+									entrada[i] = 'a';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_b:
+								if(temLetra(letrasSorteada, 1) == 1 && i != 15)
+								{
+									entrada[i] = 'b';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_c:
+								if(temLetra(letrasSorteada, 2) == 1 && i != 15)
+								{
+									entrada[i] = 'c';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_d:
+								if(temLetra(letrasSorteada, 3) == 1 && i != 15)
+								{
+									entrada[i] = 'd';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_e:
+								if(temLetra(letrasSorteada, 4) == 1 && i != 15)
+								{
+									entrada[i] = 'e';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_f:
+								if(temLetra(letrasSorteada, 5) == 1 && i != 15)
+								{
+									entrada[i] = 'f';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_g:
+								if(temLetra(letrasSorteada, 6) == 1 && i != 15)
+								{
+									entrada[i] = 'g';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_h:
+								if(temLetra(letrasSorteada, 7) == 1 && i != 15)
+								{
+									entrada[i] = 'h';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_i:
+								if(temLetra(letrasSorteada, 8) == 1 && i != 15)
+								{
+									entrada[i] = 'i';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_j:
+								if(temLetra(letrasSorteada, 9) == 1 && i != 15)
+								{
+									entrada[i] = 'j';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_l:
+								if(temLetra(letrasSorteada, 10) == 1 && i != 15)
+								{
+									entrada[i] = 'l';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+							case SDLK_m:
+								if(temLetra(letrasSorteada, 11) == 1 && i != 15)
+								{
+									entrada[i] = 'm';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_n:
+								if(temLetra(letrasSorteada, 12) == 1 && i != 15)
+								{
+									entrada[i] = 'n';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_o:
+								if(temLetra(letrasSorteada, 13) == 1 && i != 15)
+								{
+									entrada[i] = 'o';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_p:
+								if(temLetra(letrasSorteada, 14) == 1 && i != 15)
+								{
+									entrada[i] = 'p';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_q:
+								if(temLetra(letrasSorteada, 15) == 1 && i != 15)
+								{
+									entrada[i] = 'q';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_r:
+								if(temLetra(letrasSorteada, 16) == 1 && i != 15)
+								{
+									entrada[i] = 'r';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_s:
+								if(temLetra(letrasSorteada, 17) == 1 && i != 15)
+								{
+									entrada[i] = 's';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_t:
+								if(temLetra(letrasSorteada, 18) == 1 && i != 15)
+								{
+									entrada[i] = 't';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_u:
+								if(temLetra(letrasSorteada, 19) == 1 && i != 15)
+								{
+									entrada[i] = 'u';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_v:
+								if(temLetra(letrasSorteada, 20) == 1 && i != 15)
+								{
+									entrada[i] = 'v';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_x:
+								if(temLetra(letrasSorteada, 21) == 1 && i != 15)
+								{
+									entrada[i] = 'x';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_z:
+								if(temLetra(letrasSorteada, 22) == 1 && i != 15)
+								{
+									entrada[i] = 'z';
+									i++;
+									break;
+								}
+								
+								else
+									continue;
+
+							case SDLK_BACKSPACE:
+								if(i - 1 > 0)
+								{
+									letraApagada = entrada[i - 1];
+									backspace(letraApagada, letrasSorteada);								
+									entrada[i - 1] = '\0';
+									i--;
+									apagou = 1;
+									letraApagada = '\0';
+
+									break;
+								}
+
+								else if(i - 1 == 0)
+								{
+									letraApagada = entrada[0];
+									backspace(letraApagada, letrasSorteada);	
+									entrada[0] = '\0';
+									i = 0;
+									apagou = 1;
+									letraApagada = '\0';
+												
+									break;
+								}						
+
+								else
+									continue;
+
+							case SDLK_SPACE:
+								embaralha(banco[numAleatorio].palavra, saida);
+								apagou = 1;
+								break;
+
+							case SDLK_RETURN:
+								apagou = 1;
+								loop = 1;
+								break;
+
+							case SDLK_ESCAPE:
+								return 0;
+
+							default:
+								continue;
+						}
+						if(apagou == 1 || i != 0)
+						{
+							input = TTF_RenderText_Blended(fonte, entrada, vermelho); 
+							printaTela(290, 500, input, tela);
+							SDL_UpdateRect(tela, 0, 0, 0, 0);
+							input = NULL;
+							break;
+						}
+					}
+				}
+			}
+		}
+		//-------------------------FIM DO CONTROLE-------------------------
+	
+		//RECEBENDO PALAVRA ENTRADA PELO USUÁRIO
+		//printf("\nForme uma palavra: ");
+		//scanf("%s", entrada);
+
+			//TESTANDO SE TODOS OS CARACTERES DE ENTRADA SÃO LETRAS (MINÚSCULAS)
+			if(testarLetras(entrada) == 0)
+			{
+				//VERIFICANDO SE A PALAVRA ENTRADA JÁ FOI ACERTADA
+				palavraRepetida = procurarStrings(palavrasAcertadas, entrada, totalDeContidas);
+			
+				if(palavraRepetida == -1)
+				{
+					//VARRENDO O BANCO DE PALAVRAS QUE PODEM SER CONSTRUÍDAS
+					resultado = procurarStrings(contidas, entrada, totalDeContidas);
+
+					if(resultado != -1)
+					{		
+						if(compararStrings(contidas[0].palavra, entrada) == true)
+						{
+							printf("Palavra chave encontrada!\n\n");
+						
+							//PASSANDO PALAVRA SORTEADA PARA OUTRA ESTRUTURA NA POSIÇÃO COM O MESMO NÚMERO DE CHARS
+							passaString(palavrasAcertadas, numDeFormadas, entrada);
+
+							pontos = contaPontos(pontos, entrada);
+
+							for(cont2 = 0; cont2 < i; cont2++)
+							{
+								letraApagada = entrada[cont2];
+
+								backspace(letraApagada, letrasSorteada);
+							}
+
+							i = 0;
+
+							letraApagada = '\0';									
+
+							chave = 1;
+
+							rodada++;
+
+							reseta(entrada);
+
+							resetaSaida(saida);
+
+							break;			
+						}
+					
+						else
+						{
+							printf("Palavra '%s' encontrada!\n\n", contidas[resultado].palavra);
+							cont++;
+						
+							//PASSANDO PALAVRAS ACERTADAS PARA OUTRA ESTRUTURA
+							passaString(palavrasAcertadas, numDeFormadas, entrada);
+						
+							pontos = contaPontos(pontos, entrada);
+
+							for(cont2 = 0; cont2 < i; cont2++)
+							{
+								letraApagada = entrada[cont2];
+
+								backspace(letraApagada, letrasSorteada);
+							}
+
+							i = 0;
+
+							letraApagada = '\0';
+
+							reseta(entrada);
+
+							achou = 1;													
+						}
+					}
+					
+					else
+					{
+						printf("Palavra '%s' não encontrada.\n\n", entrada);
+						errou = 1;
+					}
+				}
+
+				else
+				{
+					printf("A palavra %s já foi encontrada.\n\n", entrada);			
+					repetiu = 1;
+				}
+			}
+			
+			else
+			{
+				printf("Ops, por favor, utilize apenas letras, sem acento ou cedilha.\n");
+				invalido = 1;
+			}
+	
+	}while(cont < teste);
+
+	}while(gameover == 0);
+
+	//FINALIZANDO SDL
+	TTF_CloseFont(fonte);
+
+	TTF_Quit();
+
+	SDL_Quit();
+
+	return 0;
+}
+
+
+
+//------------------------------------------------------FUNÇÕES------------------------------------------------------
+
+void resetaBanco(struct dados banco[])
+{
+	int cont = 0;
+
+	for(cont = 0; cont < totalDeContidas; cont++)
+	{
+		banco[cont].palavra[0] = '\0';
+	}
+}
+
+void resetaDisponiveis(struct alfabeto letras[])
+{
+	int cont = 0;
+
+	for(cont = 0; cont < totalDeLetras; cont++)
+		letras[cont].letra = 0;
+}
+
+void resetaSaida(char vetor[])
+{
+	int cont;
+
+	for(cont = 0; cont < maiorPalavra; cont++)
+		vetor[cont] = '-';
+}
+
+void reseta(char vetor[])
+{
+	int cont;
+
+	for(cont = 0; cont < maiorPalavra; cont++)
+			vetor[cont] = '\0';
+}
+
+void backspace(char letra, struct alfabeto entrada[]) //ADICIONA AS PALAVRAS APAGADAS DA ENTRADA
+{
+		switch(letra)
+		{
+			case 'a':
+				entrada[0].letra++;
+				break;
+				
+			case 'b':
+				entrada[1].letra++;
+				break;
+				
+			case 'c':
+				entrada[2].letra++;
+				break;
+				
+			case 'd':
+				entrada[3].letra++;
+				break;
+				
+			case 'e':
+				entrada[4].letra++;
+				break;
+				
+			case 'f':
+				entrada[5].letra++;
+				break;
+				
+			case 'g':
+				entrada[6].letra++;
+				break;
+				
+			case 'h':
+				entrada[7].letra++;
+				break;
+				
+			case 'i':
+				entrada[8].letra++;
+				break;
+					
+			case 'j':
+				entrada[9].letra++;
+				break;
+	
+			case 'l':
+				entrada[10].letra++;
+				break;
+	
+			case 'm':
+				entrada[11].letra++;
+				break;
+	
+			case 'n':
+				entrada[12].letra++;
+				break;
+	
+			case 'o':
+				entrada[13].letra++;
+				break;
+	
+			case 'p':
+				entrada[14].letra++;
+				break;
+	
+			case 'q':
+				entrada[15].letra++;
+				break;
+	
+			case 'r':
+				entrada[16].letra++;
+				break;
+	
+			case 's':
+				entrada[17].letra++;
+				break;
+	
+			case 't':
+				entrada[18].letra++;
+				break;
+	
+			case 'u':
+				entrada[19].letra++;
+				break;
+	
+			case 'v':
+				entrada[20].letra++;
+				break;
+	
+			case 'x':
+				entrada[21].letra++;
+				break;
+	
+			case 'z':
+				entrada[22].letra++;
+				break;	
+		}	
+}
+
+void refresh(SDL_Surface* ponteiro) //REIMPRIME O FUNDO DA TELA DE RODADA
+{
+	SDL_Surface* imagem = NULL;
+
+	imagem = IMG_Load("Imagens/jogo.jpg");
+
+	SDL_BlitSurface(imagem, NULL, ponteiro, NULL);
+	SDL_UpdateRect(ponteiro, 0, 0, 0, 0);
+	SDL_FreeSurface(imagem);
+}
+
+void printaTela(int x, int y, SDL_Surface* origem, SDL_Surface* destino) //IMPRIME UMA IMAGEM NA TELA
+{
+	SDL_Rect offset;
+
+	offset.x = x;
+	offset.y = y;
+
+	SDL_BlitSurface(origem, NULL, destino, &offset);
+}
+
+void inverte(char vetor[]) //INVERTE A STRING DA FUNÇÃO ABAIXO
+{ 
+	int cont = 0;
+	int cont2 = 0; 
+	char caractere;
+  
+    for (cont = 0, cont2 = strlen(vetor)-1; cont < cont2; cont++, cont2--) 
+	{  
+		caractere = vetor[cont]; 
+		vetor[cont] = vetor[cont2]; 
+		vetor[cont2] = caractere; 
+    } 
+}
+
+void itoa(int num, char vetor[]) //CONVERTE UM INTEIRO EM UMA STRING
+{ 
+	int cont = 0;
+	int teste = 0;
+    
+	if ((teste = num) < 0)
+	{
+		num = -num;
+		cont = 0;
+	}
+    
+    do
+	{ 
+      vetor[cont++] = num % 10 + '0';
+
+	}while ((num /= 10) > 0);
+
+
+	if (teste < 0)
+	{
+		vetor[cont] = '-';
+		vetor[cont] = '\0';
+	}
+
+	inverte(vetor);
+} 
+
+void passaString(struct dados estrutura[], int numPalavras, char entrada[]) //REESCREVE A ENTRADA DO USUÁRIO EM UM VETOR DE MESMO TAMANHO EM UM ESTRUTURA
+{
+	int cont = 0;
+	int cont2 = 0;
+	int num = 0;
+	int pos = 0;
+
+	for(cont = 0; entrada[cont] != '\0'; cont++)
+	{
+	}
+
+	num = cont;
+
+	for(cont = 0; cont < numPalavras; cont++)
+	{
+		for(cont2 = 0; estrutura[cont].palavra[cont2] != '\0'; cont2++)
+		{
+			if(estrutura[cont].palavra[cont2] != '-')
+				break;
+		}
+		
+		if(cont2 == num)
+		{
+			pos = cont;
+			break;
+		}
+
+		else
+			continue;
+	}
+
+	for(cont = 0; entrada[cont] != '\0'; cont++)
+	{
+		estrutura[pos].palavra[cont] = entrada[cont];
+	}
+}
+
+void embaralha(char vetor[], char vetorVago[]) //DEVOLVE UMA STRING COM AS POSIÇÕES EMBARALHADAS
+{
+	int n = 0;
+	int cont = 0;
+	int cont2 = 0;
+	char transf[15] = {'-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'};
+	
+	while(vetor[cont] != '\0')
+	{
+		n = rand () % 15;
+
+		if(transf[n] == '-')
+		{
+			transf[n] = vetor[cont];
+			cont++;
+		}
+	}
+
+	for(cont = 0; cont < 15; cont++)
+	{
+		if(transf[cont] != '-')
+		{
+			vetorVago[cont2] = transf[cont];
+			cont2++;
+		}
+
+		else
+			continue;
+	}
+
+	vetorVago[cont2] = '\0';
+
+	printf("\n\n");
+}
+
+void contaEntrada(char vetor[], struct alfabeto entrada[]) //CONTA A OCORRÊNCIA DE LETRAS NA PALAVRA SORTEADA PELO JOGO
+{
+	int cont = 0;
+	
+	for(cont = 0; vetor[cont] != '\0'; cont++)
+	{
+		switch(vetor[cont])
+		{
+			case 'a':
+				entrada[0].letra++;
+				break;
+				
+			case 'b':
+				entrada[1].letra++;
+				break;
+				
+			case 'c':
+				entrada[2].letra++;
+				break;
+				
+			case 'd':
+				entrada[3].letra++;
+				break;
+				
+			case 'e':
+				entrada[4].letra++;
+				break;
+				
+			case 'f':
+				entrada[5].letra++;
+				break;
+				
+			case 'g':
+				entrada[6].letra++;
+				break;
+				
+			case 'h':
+				entrada[7].letra++;
+				break;
+				
+			case 'i':
+				entrada[8].letra++;
+				break;
+					
+			case 'j':
+				entrada[9].letra++;
+				break;
+	
+			case 'l':
+				entrada[10].letra++;
+				break;
+	
+			case 'm':
+				entrada[11].letra++;
+				break;
+	
+			case 'n':
+				entrada[12].letra++;
+				break;
+	
+			case 'o':
+				entrada[13].letra++;
+				break;
+	
+			case 'p':
+				entrada[14].letra++;
+				break;
+	
+			case 'q':
+				entrada[15].letra++;
+				break;
+	
+			case 'r':
+				entrada[16].letra++;
+				break;
+	
+			case 's':
+				entrada[17].letra++;
+				break;
+	
+			case 't':
+				entrada[18].letra++;
+				break;
+	
+			case 'u':
+				entrada[19].letra++;
+				break;
+	
+			case 'v':
+				entrada[20].letra++;
+				break;
+	
+			case 'x':
+				entrada[21].letra++;
+				break;
+	
+			case 'z':
+				entrada[22].letra++;
+				break;
+		}
+	}	
+}
+
+void contaBanco(struct dados entrada[], struct alfabeto letrasBanco[], int posicao) //CONTA A OCORRÊNCIA DE LETRAS EM UMA PALAVRA DO BANCO
+{
+	int cont = 0;
+	
+	for(cont = 0; entrada[posicao].palavra[cont] != '\0'; cont++)
+	{
+		switch(entrada[posicao].palavra[cont])
+		{
+			case 'a':
+				letrasBanco[0].letra++;
+				break;
+				
+			case 'b':
+				letrasBanco[1].letra++;
+				break;
+				
+			case 'c':
+				letrasBanco[2].letra++;
+				break;
+				
+			case 'd':
+				letrasBanco[3].letra++;
+				break;
+				
+			case 'e':
+				letrasBanco[4].letra++;
+				break;
+				
+			case 'f':
+				letrasBanco[5].letra++;
+				break;
+				
+			case 'g':
+				letrasBanco[6].letra++;
+				break;
+				
+			case 'h':
+				letrasBanco[7].letra++;
+				break;
+				
+			case 'i':
+				letrasBanco[8].letra++;
+				break;
+					
+			case 'j':
+				letrasBanco[9].letra++;
+				break;
+	
+			case 'l':
+				letrasBanco[10].letra++;
+				break;
+	
+			case 'm':
+				letrasBanco[11].letra++;
+				break;
+	
+			case 'n':
+				letrasBanco[12].letra++;
+				break;
+	
+			case 'o':
+				letrasBanco[13].letra++;
+				break;
+	
+			case 'p':
+				letrasBanco[14].letra++;
+				break;
+	
+			case 'q':
+				letrasBanco[15].letra++;
+				break;
+	
+			case 'r':
+				letrasBanco[16].letra++;
+				break;
+	
+			case 's':
+				letrasBanco[17].letra++;
+				break;
+	
+			case 't':
+				letrasBanco[18].letra++;
+				break;
+	
+			case 'u':
+				letrasBanco[19].letra++;
+				break;
+	
+			case 'v':
+				letrasBanco[20].letra++;
+				break;
+	
+			case 'x':
+				letrasBanco[21].letra++;
+				break;
+	
+			case 'z':
+				letrasBanco[22].letra++;
+				break;
+		}
+	}	
+}
+
+bool compararStrings(char palavra1[], char palavra2[]) //TESTA SE DUAS STRINGS SÃO IGUAIS
+{
+	int cont = 0;
+	
+	while(palavra1[cont] == palavra2[cont] && palavra1[cont] != '\0' && palavra2[cont] != '\0')
+	{
+		cont++;
+	}
+	
+	if(palavra1[cont] == '\0' && palavra2[cont] == '\0')
+		return true;
+		
+		else
+			return false;
+}
+
+int temLetra(struct alfabeto disponiveis[], int n) //SUBTRAÍ AS LETRAS ENTRADAS PELO USUÁRIO
+{
+	if(disponiveis[n].letra > 0)
+	{
+		disponiveis[n].letra = disponiveis[n].letra - 1;
+		return 1;
+	}
+
+	else
+		return -1;
+}
+
+int contaPontos(int pontos, char entrada[]) //CALCULA A PONTUAÇÃO DE ACORDO COM A QUANTIDADE DE LETRAS DA PALAVRA
+{
+	int cont = 0;
+
+	for(cont = 0; entrada[cont] != '\0'; cont++)
+	{
+	}
+
+	if(cont > 10)
+		pontos = pontos + (cont * 3);
+
+	if(cont >= 7)
+		pontos = pontos + (cont * 2);
+
+	else
+		pontos = pontos + cont;
+
+	return pontos;
+}
+
+int testarLetras(char vetor[]) //TESTA SE TODOS OS CARACTERES DIGITADOS SÃO LETRAS (MINÚSCULAS)
+{
+	int cont = 0;
+	
+	while(vetor[cont] != '\0')
+	{	
+		if((vetor[cont] >= 'a' && vetor[cont] <= 'z'))
+			cont++;
+		
+		else
+		{
+			return 1;
+		}
+	}
+	
+	return 0;
+}
+
+int sorteia(char vetor[]) //SORTEIA PALAVRAS COM 6 OU MAIS CARACTERES
+{
+	int cont = 0;
+	
+	for(cont = 0; vetor[cont] != '\0'; cont++)
+	{}
+
+	return cont;
+}
+
+int procurarStrings(struct dados estrutura[], char entradaDoUsuario[], int numDePalavras) //BUSCA POR STRINGS DENTRO DE UMA ESTRUTURA
+{
+	bool compararStrings(char palavra1[], char palavra2[]);
+	
+	int cont = 0;
+	
+	while(cont < numDePalavras)
+	{
+		if(compararStrings(entradaDoUsuario, estrutura[cont].palavra))
+			return cont;
+			
+			else
+				cont++;
+	}
+	
+	return -1;
+}
